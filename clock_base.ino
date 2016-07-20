@@ -66,6 +66,7 @@ int button3Pin = 4;
 
 // Time Display options
 bool showSeconds = false;
+bool militaryTime = true;
 byte row = 0,col = 0;
 
 // Setup
@@ -282,7 +283,13 @@ void showTime()
     else { // 1-11 AM
       hr_12 = hr_24;
     }
-    if(!showSeconds){
+    if(militaryTime){
+      lcd.setCursor(18, 2);
+      lcd.print("24");
+      lcd.setCursor(18, 3);
+      lcd.print("HR");
+    }
+    if(!showSeconds && !militaryTime){
       lcd.setCursor(18, 2);
       lcd.print(ampm);
     }
@@ -290,18 +297,36 @@ void showTime()
    // Display the time using bigNumber
    row = 1;
    col = 3;
-   if (hr_12 < 10) {  
-      // bigNumber(0,row,col);
-      //col = col + 3;
-      bigNumber(hr_12,row,col);
-      col = col + 3;
+
+   if(!militaryTime) {
+     if (hr_12 < 10) {  
+        // bigNumber(0,row,col);
+        //col = col + 3;
+        bigNumber(hr_12,row,col);
+        col = col + 3;
+     }
+     else {
+       bigNumber(getDigit(hr_12,2) ,row,col);
+       col = col + 3;
+       bigNumber(getDigit(hr_12,1) ,row,col);
+       col = col + 3;
+     }
    }
    else {
-     bigNumber(getDigit(hr_12,2) ,row,col);
-     col = col + 3;
-     bigNumber(getDigit(hr_12,1) ,row,col);
-     col = col + 3;
+     if (hr_24 < 10) {
+        col = col + 2;  
+        bigNumber(hr_24,row,col);
+        col = col + 3;
+     }
+     else {
+       bigNumber(getDigit(hr_24,2) ,row,col);
+       col = col + 3;
+       bigNumber(getDigit(hr_24,1) ,row,col);
+       col = col + 3;
+     }
    }
+
+   
    bigNumber(11,row,col);
    col = col + 2;
    if (now.minute() < 10) {  
@@ -413,4 +438,3 @@ int freeRam(void) {
   }
   return free_memory; 
 }
-
