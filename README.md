@@ -1,5 +1,7 @@
 # Arduino Clock
 
+![Clock Body](https://garthvh.com/assets/img/arduino_clock/clock_body.jpg)
+
 I don't really have a great plan for this project, I already had a 4x20 LCD and 1307 breakout, I bought a $3 prototype [laser cut case](http://www.retrobuiltgames.com/the-build-page/arduino-clock-case/) on a whim and ordered some buttons to fit from china.
 
 I recently ordered a bunch of $5 SMD Uno clones with a micro USB connection that come without headers soldered on. I am going to use one of these to liberate my Adafruit metro from my Ciclop 3D Scanner and I soldered some male headers onto one for use in the clock. This has allowed me to connect everything together using jumper wires.
