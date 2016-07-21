@@ -25,15 +25,19 @@ To Start with I added a an enum to store the "modes" for the clock.  Pushing but
 * SHOW_SYSTEM_INFO - Displays System Information
  
 ![Clock Screen Time](https://garthvh.com/assets/img/arduino_clock/clock_screen_time.jpg)
+
 SHOW_TIME Display
 
 ![Clock Screen Custom Prompt](https://garthvh.com/assets/img/arduino_clock/clock_screen_custom_1.jpg)
+
 SHOW_CUSTOM_TEXT Prompt Screen
 
 ![Clock Screen Custom Text](https://garthvh.com/assets/img/arduino_clock/clock_screen_custom_2.jpg)
+
 SHOW_CUSTOM_TEXT Display Screen
 
 ![Clock Screen System Information](https://garthvh.com/assets/img/arduino_clock/clock_screen_info.jpg)
+
 SHOW_SYSTEM_INFO Display
 
 The SHOW_SPLASH and SHOW_SYSTEM_INFO modes are essentially the same at this point, but the SHOW_SPLASH mode can be set as the default and then will load SHOW_TIME after the splash text has been up for 5 seconds. 
