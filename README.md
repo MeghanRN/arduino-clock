@@ -15,11 +15,25 @@ Currently the clock and sketch supports the following hardware
 
 The case has a cutout for a rocker switch, and a three way switch is pictured in the Retro Built Games photos.  I currently have a two way rocker switch installed in the case but don't have it actually connected and have not used it in any code yet.
 
+![Clock Body](https://garthvh.com/assets/img/arduino_clock/clock_top.jpg)
+
 To Start with I added a an enum to store the "modes" for the clock.  Pushing button 1 will switch to the next mode.  There are currently 4 different modes configured in the sketch.
 
 * SHOW_SPLASH - Displays the Splash Screen for 5 seconds and then switches to SHOW_TIME
 * SHOW_TIME - Displays the time using a large 3 row font below the date in the first row
 * SHOW_CUSTOM_TEXT - Displays the time and custom text loaded from the serial port
 * SHOW_SYSTEM_INFO - Displays System Information
+ 
+![Clock Screen Time](https://garthvh.com/assets/img/arduino_clock/clock_screen_time.jpg)
+SHOW_TIME Display
+
+![Clock Screen Custom Prompt](https://garthvh.com/assets/img/arduino_clock/clock_screen_custom_1.jpg)
+SHOW_CUSTOM_TEXT Prompt Screen
+
+![Clock Screen Custom Text](https://garthvh.com/assets/img/arduino_clock/clock_screen_custom_2.jpg)
+SHOW_CUSTOM_TEXT Display Screen
+
+![Clock Screen System Information](https://garthvh.com/assets/img/arduino_clock/clock_screen_info.jpg)
+SHOW_SYSTEM_INFO Display
 
 The SHOW_SPLASH and SHOW_SYSTEM_INFO modes are essentially the same at this point, but the SHOW_SPLASH mode can be set as the default and then will load SHOW_TIME after the splash text has been up for 5 seconds. 
