@@ -6,16 +6,23 @@
  * /                              Last Updated January, 2019
  * /
 /********************************************************************************************/
+// TODO
+// * eeprom settings
+// * setting update ui
+// * alarm function and settings
+// * handle hour rollover screen issue
 
 #define build 1
 #define revision 6
-
+#define buzzer 10
+#define OCTAVE_OFFSET 0
+#define isdigit(n) (n >= '0' && n <= '9')
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <RTClib.h> 
 RTC_DS1307 RTC;
-// Set the pins on the I2C chip used for LCD connections
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
+
 // custom characters for time font
 byte x10[8] = {0x00,0x00,0x00,0x00,0x00,0x07,0x07,0x07};// digit piece   
 byte x11[8] = {0x00,0x00,0x00,0x00,0x00,0x1C,0x1C,0x1C};// digit piece
@@ -33,16 +40,12 @@ enum states
     SHOW_CUSTOM_TEXT,    // Displays the time and custom text from the serial port
     SHOW_SYSTEM_INFO,    // Displays System Information
 };
-// holds the current state of the clock
-states state;  
-// holds the previous state of the clock
-// used to refresh the screen once when the mode changes
-states previousState;  
+// holds the current and previous state of the clock
+states state, previousState;  
 
 //////////////////////
 // Global Variables //
 //////////////////////
-
 // Button Pins
 int button1Pin = 2;
 int button2Pin = 3;
@@ -59,6 +62,14 @@ String ampm;
 // Time Display options (TODO Store in eeprom)
 bool showSeconds = true;
 bool militaryTime = false;
+// sound playback
+const int tonePin = buzzer;  // for rEDI board
+// These values can also be found as constants in the Tone library (Tone.h)
+int notes[] = { 0, 262, 277, 294, 311, 330, 349, 370, 392, 415, 440, 466, 494, 523, 554, 587, 622, 659, 698, 740, 784, 831, 880, 932, 988, 1047, 1109, 1175, 1245, 1319, 1397, 1480, 1568, 1661, 1760, 1865, 1976, 2093, 2217, 2349, 2489, 2637, 2794, 2960, 3136, 3322, 3520, 3729, 3951};
+// alarms
+char *nokia = "NokiaTun:d=4,o=5,b=225:8e6,8d6,f#,g#,8c#6,8b,d,e,8b,8a,c#,e,2a";
+char *hamster_dance = "HamsterD:d=16,o=6,b=140:g#,g,8g#,8e,8e,e,8b5.,4b5,4g#,8b5,g#,8a,2b.,e7,c#7,b,c#7,b,g#,b,g#,f#,e,c#,e,f#,e,g#,b,g#,b,f#,e,8c#,2e";
+char *twentyfour_phone = "24Ctu:d=16,o=5,b=565:f6,p,f6,4p,p,f6,p,f6,2p,p,b6,p,b6,p,b6,p,b6,p,b,p,b,p,b,p,b,p,b,p,b,p,b,p,b,1p.,2p.,p,f6,p,f6,4p,p,f6,p,f6,2p,p,b6,p,b6,p,b6,p,b6,p,b,p,b,p,b,p,b,p,b,p,b,p,b,p,c";
 
 ///////////////////////
 // Setup - runs once //
@@ -75,6 +86,9 @@ void setup() {
     pinMode(button2Pin, INPUT_PULLUP);
     pinMode(button3Pin, INPUT_PULLUP);
     pinMode(button4Pin, INPUT_PULLUP);
+    // Set buzzer as an output
+    pinMode(buzzer, OUTPUT); 
+    noTone (buzzer);
     // setup LCD  for 20 columns and 4 rows
     lcd.begin(20,4); 
     // create custom characters for clock font
@@ -166,12 +180,19 @@ void loop() {
         // Button 2 - Green
         if (button2State == LOW) { 
           Serial.println("Button 2 Pressed - Green");
+          delay(150);
+          play_rtttl(hamster_dance);
+          Serial.println("Done Playing Songs.");
           delay(500);
         }
         // Button 3 - Blue
         if (button3State == LOW) { 
-          Serial.println("Button 3 Pressed - Blue");
-          delay(500);
+           Serial.println("Button 3 Pressed - Blue");
+           play_rtttl(twentyfour_phone);
+           delay(150);
+            play_rtttl(nokia);
+           delay(150);
+
         }
     }
     if (previousToggleState != button4State && (state == SHOW_TIME || state == SHOW_CUSTOM_TEXT)){
@@ -378,6 +399,7 @@ void showTime() {
 // draw a loading screen
 void drawLoadingScreen()
 {
+
   lcd.clear();
   //drawSolidBorder();
   lcd.setCursor(1, 1);
@@ -487,6 +509,7 @@ void bigNumber(byte num, byte r, byte c) {
       case 5: lcd.write(byte(2)); lcd.write(byte(2)); 
               lcd.setCursor(c,r+1); lcd.write(byte(4)); lcd.write(byte(2)); 
               lcd.setCursor(c,r+2); lcd.write(byte(2)); lcd.write(byte(3)); break;  
+              
       case 6: lcd.write(byte(1)); lcd.print(" ");     
               lcd.setCursor(c,r+1); lcd.write(byte(4)); lcd.write(byte(2)); 
               lcd.setCursor(c,r+2); lcd.write(byte(4)); lcd.write(byte(3)); break;  
@@ -535,4 +558,168 @@ int freeRam(void) {
     free_memory = ((int)&free_memory) - ((int)__brkval); 
   }
   return free_memory; 
+}
+
+/////////////////////
+// Tones and Music //
+/////////////////////
+void play_rtttl(char *p)
+{
+  // Absolutely no error checking in here
+  byte default_dur = 4;
+  byte default_oct = 6;
+  int bpm = 63;
+  int num;
+  long wholenote;
+  long duration;
+  byte note;
+  byte scale;
+
+  // format: d=N,o=N,b=NNN:
+  // find the start (skip name, etc)
+
+  while(*p != ':') p++;    // ignore name
+  p++;                     // skip ':'
+
+  // get default duration
+  if(*p == 'd')
+  {
+    p++; p++;              // skip "d="
+    num = 0;
+    while(isdigit(*p))
+    {
+      num = (num * 10) + (*p++ - '0');
+    }
+    if(num > 0) default_dur = num;
+    p++;                   // skip comma
+  }
+
+  Serial.print("ddur: "); Serial.println(default_dur, 10);
+
+  // get default octave
+  if(*p == 'o')
+  {
+    p++; p++;              // skip "o="
+    num = *p++ - '0';
+    if(num >= 3 && num <=7) default_oct = num;
+    p++;                   // skip comma
+  }
+
+  Serial.print("doct: "); Serial.println(default_oct, 10);
+
+  // get BPM
+  if(*p == 'b')
+  {
+    p++; p++;              // skip "b="
+    num = 0;
+    while(isdigit(*p))
+    {
+      num = (num * 10) + (*p++ - '0');
+    }
+    bpm = num;
+    p++;                   // skip colon
+  }
+
+  Serial.print("bpm: "); Serial.println(bpm, 10);
+
+  // BPM usually expresses the number of quarter notes per minute
+  wholenote = (60 * 1000L / bpm) * 4;  // this is the time for whole note (in milliseconds)
+
+  Serial.print("wn: "); Serial.println(wholenote, 10);
+
+  // now begin note loop
+  while(*p)
+  {
+    // first, get note duration, if available
+    num = 0;
+    while(isdigit(*p))
+    {
+      num = (num * 10) + (*p++ - '0');
+    }
+    
+    if(num) duration = wholenote / num;
+    else duration = wholenote / default_dur;  // we will need to check if we are a dotted note after
+
+    // now get the note
+    note = 0;
+
+    switch(*p)
+    {
+      case 'c':
+        note = 1;
+        break;
+      case 'd':
+        note = 3;
+        break;
+      case 'e':
+        note = 5;
+        break;
+      case 'f':
+        note = 6;
+        break;
+      case 'g':
+        note = 8;
+        break;
+      case 'a':
+        note = 10;
+        break;
+      case 'b':
+        note = 12;
+        break;
+      case 'p':
+      default:
+        note = 0;
+    }
+    p++;
+
+    // now, get optional '#' sharp
+    if(*p == '#')
+    {
+      note++;
+      p++;
+    }
+
+    // now, get optional '.' dotted note
+    if(*p == '.')
+    {
+      duration += duration/2;
+      p++;
+    }
+  
+    // now, get scale
+    if(isdigit(*p))
+    {
+      scale = *p - '0';
+      p++;
+    }
+    else
+    {
+      scale = default_oct;
+    }
+
+    scale += OCTAVE_OFFSET;
+
+    if(*p == ',')
+      p++;       // skip comma for next note (or we may be at the end)
+
+    // now play the note
+    if(note)
+    {
+      Serial.print("Playing: ");
+      Serial.print(scale, 10); Serial.print(' ');
+      Serial.print(note, 10); Serial.print(" (");
+      Serial.print(notes[(scale - 4) * 12 + note], 10);
+      Serial.print(") ");
+      Serial.println(duration, 10);
+      tone(tonePin, notes[(scale - 4) * 12 + note]);
+      delay(duration);
+      noTone(tonePin);
+    }
+    else
+    {
+      Serial.print("Pausing: ");
+      Serial.println(duration, 10);
+      delay(duration);
+    }
+  }
 }
